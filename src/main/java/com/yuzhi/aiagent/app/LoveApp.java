@@ -123,11 +123,11 @@ public class LoveApp {
                 //开启日志
                 .advisors(new YuLoggerAdvisor())
                 //应用RAG知识库问答
-                .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
+//                .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
 //                //应用RAG检索增强服务（基于云服务器）
 //                .advisors(loveAppRagCloudAdvisor)
-//                //应用 RAG 检索增强 （基于PgVector向量存储）
-//                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
+                //应用 RAG 检索增强 （基于PgVector向量存储）
+                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
                 .call()
                 .chatResponse();
 
