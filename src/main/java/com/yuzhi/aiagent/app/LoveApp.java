@@ -10,6 +10,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
@@ -101,6 +102,12 @@ public class LoveApp {
     @Resource
     private VectorStore loveAppVectorStore;
 
+    @Resource
+    private Advisor loveAppRagCloudAdvisor;
+
+    @Resource
+    private VectorStore pgVectorVectorStore;
+
     /**
      * RAG 知识库对话
      * @param message
@@ -113,14 +120,23 @@ public class LoveApp {
                 .user(message)
                 .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
                         .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                //开启日志
                 .advisors(new YuLoggerAdvisor())
+                //应用RAG知识库问答
                 .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
+//                //应用RAG检索增强服务（基于云服务器）
+//                .advisors(loveAppRagCloudAdvisor)
+//                //应用 RAG 检索增强 （基于PgVector向量存储）
+//                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
                 .call()
                 .chatResponse();
+
 
         String content = chatResponse.getResult().getOutput().getText();
         log.info("content:{}", content);
         return content;
+
+        
 
     }
 }
