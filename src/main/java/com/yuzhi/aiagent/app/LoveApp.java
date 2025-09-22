@@ -4,6 +4,8 @@ package com.yuzhi.aiagent.app;
 import com.yuzhi.aiagent.advisor.ReReadingAdvisor;
 import com.yuzhi.aiagent.advisor.YuLoggerAdvisor;
 import com.yuzhi.aiagent.chatmemory.FileBasedChatMemory;
+import com.yuzhi.aiagent.rag.LoveAppRagCustomAdvisorFactory;
+import com.yuzhi.aiagent.rag.QueryRewriter;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -15,6 +17,7 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.memory.InMemoryChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Component;
 
@@ -108,6 +111,11 @@ public class LoveApp {
     @Resource
     private VectorStore pgVectorVectorStore;
 
+    @Resource
+    private QueryRewriter queryRewriter;
+
+
+
     /**
      * RAG 知识库对话
      * @param message
@@ -115,6 +123,8 @@ public class LoveApp {
      * @return
      */
     public String  doChatWithRag(String message, String chatId) {
+        String rewritedMessage = queryRewriter.doQueryRewrite(message);
+
         ChatResponse chatResponse = chatClient
                 .prompt()
                 .user(message)
@@ -126,8 +136,14 @@ public class LoveApp {
 //                .advisors(new QuestionAnswerAdvisor(loveAppVectorStore))
 //                //应用RAG检索增强服务（基于云服务器）
 //                .advisors(loveAppRagCloudAdvisor)
-                //应用 RAG 检索增强 （基于PgVector向量存储）
-                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
+//                //应用 RAG 检索增强 （基于PgVector向量存储）
+//                .advisors(new QuestionAnswerAdvisor(pgVectorVectorStore))
+                // 工厂模式创建文档检索器
+                .advisors(
+                        LoveAppRagCustomAdvisorFactory.createRagCustomAdvisor(
+                                loveAppVectorStore, "单身"
+                        )
+                )
                 .call()
                 .chatResponse();
 
@@ -136,7 +152,26 @@ public class LoveApp {
         log.info("content:{}", content);
         return content;
 
-        
-
     }
+
+    //Ai 调用工具能力
+    @Resource
+    private ToolCallback[] allTools;
+
+    public String doChatWithTools(String message, String chatId) {
+        ChatResponse response = chatClient
+                .prompt()
+                .user(message)
+                .advisors(spec -> spec.param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
+                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                // 开启日志，便于观察效果
+                .advisors(new YuLoggerAdvisor())
+                .tools(allTools)
+                .call()
+                .chatResponse();
+        String content = response.getResult().getOutput().getText();
+        log.info("content: {}", content);
+        return content;
+    }
+
 }
