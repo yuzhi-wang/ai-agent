@@ -3,6 +3,12 @@ spring:
     name: ai-agent
   profiles:
     active: local
+  ai:
+    mcp:
+      client:
+        stdio:
+          servers-configuration: classpath:mcp-servers.json
+
 #  ai:
 #    ollama:
 #      base-url: http://localhost:11434
